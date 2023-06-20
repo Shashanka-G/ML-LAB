@@ -1,1 +1,42 @@
 
+import numpy as np
+ def em_algorithm(X, K, max_iter=100):
+    # Initialize parameters
+    N, D = X.shape
+    pi = np.ones(K) / K
+    mu = X[np.random.choice(N, K, replace=False)]
+    sigma = np.array([np.eye(D) for _ in range(K)])
+    ll_old = 0
+     # Run EM algorithm
+    for i in range(max_iter):
+        # E-step: Compute responsibilities
+        resps = np.zeros((N, K))
+        for k in range(K):
+            resps[:, k] = pi[k] * gaussian_pdf(X, mu[k], sigma[k])
+        resps /= resps.sum(axis=1, keepdims=True)
+         # M-step: Update parameters
+        Nk = resps.sum(axis=0)
+        pi = Nk / N
+        for k in range(K):
+            mu[k] = (X * resps[:, k:k+1]).sum(axis=0) / Nk[k]
+            X_centered = X - mu[k]
+            sigma[k] = (resps[:, k:k+1] * X_centered).T @ X_centered / Nk[k]
+         # Compute log-likelihood and check for convergence
+        ll_new = np.sum(np.log(resps @ pi))
+        if np.abs(ll_new - ll_old) < 1e-6:
+            break
+        ll_old = ll_new
+     return pi, mu, sigma
+ def gaussian_pdf(X, mu, sigma):
+    D = X.shape[1]
+    det = np.linalg.det(sigma)
+    inv = np.linalg.inv(sigma)
+    norm = 1 / np.sqrt((2 * np.pi) ** D * det)
+    exp = np.exp(-0.5 * np.sum((X - mu) @ inv * (X - mu), axis=1))
+    return norm * exp
+ # Example usage
+X = np.random.randn(100, 2)
+pi, mu, sigma = em_algorithm(X, 3)
+print(pi)
+print(mu)
+print(sigma)
